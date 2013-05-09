@@ -38,6 +38,12 @@
     }
   }
 
+  function clearEventBubbling(model) {
+    _(model.relations).each(function (relation) {
+      model.stopListening(model.get(relation.key))
+    }, model)
+  }
+
   function nestedToJson(json, relations, options) {
     _(relations).each(function (relation) {
       relationJson = json[relation.key]
@@ -87,6 +93,11 @@
 
     clone: function() {
       return new this.constructor(this.toJSON());
+    },
+
+    clear: function (options) {
+      clearEventBubbling(this)
+      return BackboneModelPrototype.clear.apply(this, arguments)
     }
   })
 })()

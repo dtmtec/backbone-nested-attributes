@@ -174,7 +174,7 @@ describe("Backbone.NestedAttributesModel", function() {
 
       beforeEach(function() {
         changedCount = 0
-        changedModel = null
+        changedModel = undefined
 
         model = new Post({ title: 'Some Title', comments: [{ body: 'some comment' }] })
         comment = model.get('comments').at(0)
@@ -280,6 +280,28 @@ describe("Backbone.NestedAttributesModel", function() {
           comment = model.get('comments').at(0)
           model.get('comments').remove(comment)
           expect(changedModel).toBe(comment)
+        })
+      })
+
+      describe("when clearing", function() {
+        it("stops listening to collection nested:change events", function() {
+          model.on('nested:change', function (model) {
+            changedModel = model
+          })
+
+          model.clear()
+          comment.set({ body: 'some new body' })
+          expect(changedModel).toBeUndefined()
+        })
+
+        it("stops listening to collection change:<relationKey> events", function() {
+          model.on('change:comments', function (model) {
+            changedModel = model
+          })
+
+          model.clear()
+          comment.set({ body: 'some new body' })
+          expect(changedModel).toBeUndefined()
         })
       })
     })
