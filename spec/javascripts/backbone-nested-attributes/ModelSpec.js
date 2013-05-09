@@ -128,6 +128,23 @@ describe("Backbone.NestedAttributesModel", function() {
       })
     })
 
+    describe("cloning", function() {
+      beforeEach(function() {
+        post = new Post({ title: 'Some Title', comments: [{ body: 'some comment' }] })
+      })
+
+      it("creates a new post object, with the same attributes, including nested, but do not share the nested collections", function() {
+        var newPost = post.clone()
+
+        expect(newPost).not.toBe(post)
+        expect(newPost.get('comments')).not.toBe(post.get('comments'))
+        expect(newPost.get('comments').at(0)).not.toBe(post.get('comments').at(0))
+
+        expect(newPost.get('title')).toEqual(post.get('title'))
+        expect(newPost.get('comments').at(0).get('body')).toEqual(post.get('comments').at(0).get('body'))
+      })
+    })
+
     describe("specifying the collection type", function() {
       var Comments
 

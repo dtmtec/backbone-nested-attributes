@@ -72,6 +72,10 @@
 
     toJSON: function (options) {
       return nestedToJson(BackboneModelPrototype.toJSON.apply(this, arguments), this.relations, options)
+    },
+
+    clone: function() {
+      return new this.constructor(this.toJSON());
     }
   })
 })()
