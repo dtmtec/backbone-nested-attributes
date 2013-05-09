@@ -169,7 +169,122 @@ describe("Backbone.NestedAttributesModel", function() {
       })
     })
 
-    describe("#toJSON()", function() {
+    describe("event bubbling", function() {
+      var changedModel, changedCount
+
+      beforeEach(function() {
+        changedCount = 0
+        changedModel = null
+
+        model = new Post({ title: 'Some Title', comments: [{ body: 'some comment' }] })
+        comment = model.get('comments').at(0)
+      })
+
+      describe("when a nested model is changed", function() {
+        it("triggers a nested:change event on the parent, with the changed model as an argument", function() {
+          model.on('nested:change', function (model) {
+            changedModel = model
+          })
+
+          comment.set({ body: 'some new body' })
+          expect(changedModel).toBe(comment)
+        })
+
+        it("triggers a nested:change only once, after setting nested attributes again", function() {
+          model.set({ title: 'Some Title', comments: [{ body: 'some other comment' }] })
+          comment = model.get('comments').at(0)
+
+          model.on('nested:change', function (model) {
+            changedModel = model
+            changedCount += 1
+          })
+
+          comment.set({ body: 'some new body' })
+          expect(changedModel).toBe(comment)
+          expect(changedCount).toEqual(1)
+        })
+
+        it("triggers a change:<relationKey> event on the parent, with the changed model as an argument", function() {
+          model.on('change:comments', function (model) {
+            changedModel = model
+          })
+
+          comment.set({ body: 'some new body' })
+          expect(changedModel).toBe(comment)
+        })
+
+        it("triggers a change:<relationKey> only once, after setting nested attributes again", function() {
+          model.set({ title: 'Some Title', comments: [{ body: 'some other comment' }] })
+          comment = model.get('comments').at(0)
+
+          model.on('change:comments', function (model) {
+            changedModel = model
+            changedCount += 1
+          })
+
+          comment.set({ body: 'some new body' })
+          expect(changedModel).toBe(comment)
+          expect(changedCount).toEqual(1)
+        })
+
+        describe("and the nested model triggers a nested:change", function() {
+          it("triggers a nested:change on the parent", function() {
+            model.on('nested:change', function (model) {
+              changedModel = model
+            })
+
+            comment.trigger('nested:change', comment)
+            expect(changedModel).toBe(comment)
+          })
+        })
+      })
+
+      describe("when adding a new model to a nested relation", function() {
+        it("triggers a nested:change event on the parent, with the added model as an argument", function() {
+          model.on('nested:change', function (model) {
+            changedModel = model
+          })
+
+          model.get('comments').add({ body: 'other comment' })
+          comment = model.get('comments').at(1)
+          expect(changedModel).toBe(comment)
+        })
+
+        it("triggers a change:<relationKey> event on the parent, with the added model as an argument", function() {
+          model.on('change:comments', function (model) {
+            changedModel = model
+          })
+
+          model.get('comments').add({ body: 'other comment' })
+          comment = model.get('comments').at(1)
+          expect(changedModel).toBe(comment)
+        })
+      })
+
+      describe("when removing a new model to a nested relation", function() {
+        it("triggers a nested:change event on the parent, with the removed model as an argument", function() {
+          model.on('nested:change', function (model) {
+            changedModel = model
+          })
+
+          comment = model.get('comments').at(0)
+          model.get('comments').remove(comment)
+          expect(changedModel).toBe(comment)
+        })
+
+        it("triggers a change:<relationKey> event on the parent, with the removed model as an argument", function() {
+          model.on('change:comments', function (model) {
+            changedModel = model
+          })
+
+          comment = model.get('comments').at(0)
+          model.get('comments').remove(comment)
+          expect(changedModel).toBe(comment)
+        })
+      })
+    })
+
+    describe("toJSON", function() {
       beforeEach(function() {
         model = new Post({ title: 'Some Title', comments: [{ body: 'some comment' }] })
       })

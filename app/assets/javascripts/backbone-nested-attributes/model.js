@@ -14,17 +14,28 @@
   }
 
   function setNestedAttributeFor(model, relation, attributes) {
-    var key          = relation.key,
-        value        = attributes[key],
-        currentValue = model.get(key),
-        collection   = currentValue || createNestedAttributeCollection(relation)
+    var key           = relation.key,
+        value         = attributes[key],
+        currentValue  = model.get(key),
+        collection    = currentValue || createNestedAttributeCollection(relation)
 
     value = value instanceof Backbone.Collection ? value.slice() : value
 
+    configureEventBubbling(model, collection, relation)
     collection.set(value)
     attributes[key] = collection
 
     return attributes
+  }
+
+  function configureEventBubbling(model, collection, relation) {
+    if (!collection._hasEventBubblingConfigured) {
+      model.listenTo(collection, 'add change nested:change remove', function (nestedModel, options) {
+        model.trigger('nested:change change:' + relation.key, nestedModel, options)
+      })
+
+      collection._hasEventBubblingConfigured = true
+    }
   }
 
   function nestedToJson(json, relations, options) {
