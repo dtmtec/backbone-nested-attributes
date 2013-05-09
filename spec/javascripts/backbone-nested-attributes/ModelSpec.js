@@ -314,6 +314,84 @@ describe("Backbone.NestedAttributesModel", function() {
       it("serializes the own attributes, as well as the relation", function() {
         expect(model.toJSON()).toEqual({ title: 'Some Title', comments: [{ body: 'some comment' }] })
       })
+
+      describe("with nested attributes support", function() {
+        it("serializes the relation attributes with a _attributes suffix", function() {
+          expect(model.toJSON({ nested: true })).toEqual({
+            title: 'Some Title',
+            comments_attributes: [{ body: 'some comment' }]
+          })
+        })
+
+        describe("when a nested model is removed", function() {
+          describe("and it is a new model", function() {
+            beforeEach(function() {
+              comment = model.get('comments').at(0)
+            })
+
+            it("is not serialized on the relation", function() {
+              model.get('comments').remove(comment)
+
+              expect(model.toJSON({ nested: true })).toEqual({
+                title: 'Some Title',
+                comments_attributes: []
+              })
+            })
+          })
+
+          describe("and it is not a new model", function() {
+            beforeEach(function() {
+              comment = model.get('comments').at(0)
+              comment.set({ id: '123' })
+            })
+
+            it("is serialized on the relation, with { _destroy: true } attribute, besides its own attributes", function() {
+              model.get('comments').remove(comment)
+
+              expect(model.toJSON({ nested: true })).toEqual({
+                title: 'Some Title',
+                comments_attributes: [{
+                  id: comment.get('id'),
+                  body: comment.get('body'),
+                  _destroy: true
+                }]
+              })
+            })
+
+            describe("after synchronizing the parent model", function() {
+              beforeEach(function() {
+                jasmine.Ajax.useMock()
+                model.url = 'http://someapi.com'
+              })
+
+              it("is not serialized on the relation", function() {
+                model.get('comments').remove(comment)
+                model.save()
+
+                request = mostRecentAjaxRequest();
+                request.response({status: 200, responseText: { title: 'Some Title', comments: [] }})
+
+                expect(model.toJSON({ nested: true })).toEqual({
+                  title: 'Some Title',
+                  comments_attributes: []
+                })
+              })
+            })
+
+            describe("after clearing the parent model", function() {
+              it("is not serialized on the relation", function() {
+                model.get('comments').remove(comment)
+                model.clear()
+
+                expect(model.toJSON({ nested: true })).toEqual({
+                  title: undefined,
+                  comments_attributes: []
+                })
+              })
+            })
+          })
+        })
+      })
     })
   })
 })

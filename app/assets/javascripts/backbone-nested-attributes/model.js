@@ -1,4 +1,4 @@
-(function() {
+(function(Backbone, _) {
   var BackboneModelPrototype = Backbone.Model.prototype
 
   function setNestedAttributes(model, key, value, options) {
@@ -9,6 +9,8 @@
         setNestedAttributeFor(model, relation, attributes)
       })
     }
+
+    configureNestedAttributesEvents(model)
 
     return attributes
   }
@@ -28,6 +30,20 @@
     return attributes
   }
 
+  function configureNestedAttributesEvents(model) {
+    if (!model._hasNestedAttributesEventsConfigured) {
+      model.on('sync', function () {
+        _(model.relations).each(function (relation) {
+          var collection = model.get(relation.key)
+
+          collection.deletedModels.reset()
+        })
+      })
+
+      model._hasNestedAttributesEventsConfigured = true
+    }
+  }
+
   function configureEventBubbling(model, collection, relation) {
     if (!collection._hasEventBubblingConfigured) {
       model.listenTo(collection, 'add change nested:change remove', function (nestedModel, options) {
@@ -38,18 +54,31 @@
     }
   }
 
-  function clearEventBubbling(model) {
+  function clearNestedCollectionEvents(model) {
     _(model.relations).each(function (relation) {
-      model.stopListening(model.get(relation.key))
+      var collection = model.get(relation.key)
+
+      model.stopListening(collection)
+      collection.off('remove', nestedModelRemoved, collection)
+      collection.deletedModels.reset()
     }, model)
   }
 
   function nestedToJson(json, relations, options) {
     _(relations).each(function (relation) {
-      relationJson = json[relation.key]
+      var key     = relation.key,
+          value   = json[key],
+          deleted = []
 
-      if (relationJson) {
-        json[relation.key] = relationJson.toJSON(options)
+      if (value) {
+        if (options && options.nested) {
+          delete json[key]
+          key = key + '_attributes'
+
+          deleted = value.deletedModels.toJSON(options)
+        }
+
+        json[key] = value.toJSON(options).concat(deleted)
       }
     })
 
@@ -62,7 +91,17 @@
 
     collection.model = _(relation).result('relatedModel') || collection.model
 
+    collection.deletedModels = new Backbone.Collection
+    collection.on('remove', nestedModelRemoved, collection)
+
     return collection
+  }
+
+  function nestedModelRemoved(model) {
+    if (!model.isNew()) {
+      model.set({ _destroy: true })
+      this.deletedModels.add(model) // this refers to the collection
+    }
   }
 
   function attributesFor(key, value, options) {
@@ -96,8 +135,8 @@
     },
 
     clear: function (options) {
-      clearEventBubbling(this)
+      clearNestedCollectionEvents(this)
       return BackboneModelPrototype.clear.apply(this, arguments)
     }
   })
-})()
+})(Backbone, _)
