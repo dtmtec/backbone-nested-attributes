@@ -98,6 +98,15 @@ describe("Backbone.NestedAttributesModel", function() {
         expect(model.get('comments').at(0).get('body')).toEqual('some other comment')
       })
 
+      it("allows passing key, value when setting a relation attribute", function() {
+        model.set('comments', [{ body: 'some comment' }])
+
+        comment = model.get('comments').at(0)
+
+        expect(comment).toBeAnInstanceOf(Comment)
+        expect(comment.get('body')).toEqual('some comment')
+      })
+
       describe("passing a collection to a relation attribute", function() {
         var comments, Comments
 
