@@ -27,6 +27,7 @@
 
         if (value) {
           currentValue = this.get(key)
+          value        = value instanceof Backbone.Collection ? value.slice() : value
 
           if (currentValue) {
             collection = currentValue
@@ -46,9 +47,26 @@
       return BackboneModelPrototype.set.call(this, attributes, options)
     },
 
+    toJSON: function (options) {
+      var json = BackboneModelPrototype.toJSON.apply(this, arguments),
+          relationJson
+
+      _(this.relations).each(function (relation) {
+        relationJson = json[relation.key]
+
+        if (relationJson) {
+          json[relation.key] = json[relation.key].toJSON(options)
+        }
+      }, this)
+
+      return json
+    },
+
     _createNestedAttributeCollection: function (relation) {
-      var collection = new Backbone.Collection
-      collection.model = _(relation).result('relatedModel')
+      var CollectionType = _(relation).result('collectionType') || Backbone.Collection,
+          collection     = new CollectionType
+
+      collection.model = _(relation).result('relatedModel') || collection.model
 
       return collection
     }

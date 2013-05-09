@@ -14,7 +14,6 @@ describe("Backbone.NestedAttributesModel", function() {
       Post = Backbone.NestedAttributesModel.extend({
         relations: [
           {
-            type: 'many',
             key:  'comments',
             relatedModel: function () { return Comment }
           }
@@ -22,23 +21,22 @@ describe("Backbone.NestedAttributesModel", function() {
       })
 
       Comment = Backbone.NestedAttributesModel.extend({})
-
-      model = new Post
     })
 
     describe("when creating", function() {
       it("initializes the comments attribute with an empty collection", function() {
+        model = new Post
         expect(model.get('comments')).toBeDefined()
         expect(model.get('comments')).toBeAnInstanceOf(Backbone.Collection)
       });
 
       describe("while setting attributes", function() {
         beforeEach(function() {
-          model = new Post({ foo: 'bar', comments: [{ body: 'some comment'} ] })
+          model = new Post({ title: 'Some Title', comments: [{ body: 'some comment'} ] })
         })
 
         it("sets the normal attributes", function() {
-          expect(model.get('foo')).toEqual('bar')
+          expect(model.get('title')).toEqual('Some Title')
         })
 
         it("creates the comment inside comments collection", function() {
@@ -47,10 +45,32 @@ describe("Backbone.NestedAttributesModel", function() {
           expect(comment).toBeAnInstanceOf(Comment)
           expect(comment.get('body')).toEqual('some comment')
         })
+
+        describe("passing a collection to a relation attribute", function() {
+          var comments, Comments
+
+          beforeEach(function() {
+            Comments = Backbone.Collection.extend({ model: Comment })
+            comments = new Comments({ body: 'some comment' }, { body: 'some other comment' })
+            model = new Post({ title: 'Some Title', comments: comments })
+          })
+
+          it("does not store the given collection, but instead creates a new one with models from the given collection", function() {
+            expect(model.get('comments')).not.toBe(comments)
+            expect(model.get('comments')).not.toBeAnInstanceOf(Comments)
+            expect(model.get('comments')).toBeAnInstanceOf(Backbone.Collection)
+            expect(model.get('comments').at(0)).toBe(comments.at(0))
+            expect(model.get('comments').at(1)).toBe(comments.at(1))
+          })
+        })
       })
     })
 
     describe("when updating", function() {
+      beforeEach(function() {
+        model = new Post
+      })
+
       it("creates the comment inside comments collection", function() {
         model.set({ comments: [{ body: 'some comment' }] })
 
@@ -76,6 +96,60 @@ describe("Backbone.NestedAttributesModel", function() {
         model.set({ comments: [{ id: existingComment.id, body: 'some other comment' }] })
 
         expect(model.get('comments').at(0).get('body')).toEqual('some other comment')
+      })
+
+      describe("passing a collection to a relation attribute", function() {
+        var comments, Comments
+
+        beforeEach(function() {
+          Comments = Backbone.Collection.extend({ model: Comment })
+          comments = new Comments({ body: 'some comment' }, { body: 'some other comment' })
+          model = new Post
+        })
+
+        it("does not store the given collection, but instead updates the existing one with models from the given collection", function() {
+          var originalCollection = model.get('comments')
+
+          model.set({ title: 'Some Title', comments: comments })
+
+          expect(model.get('comments')).toBe(originalCollection)
+          expect(model.get('comments').at(0)).toBe(comments.at(0))
+          expect(model.get('comments').at(1)).toBe(comments.at(1))
+        })
+      })
+    })
+
+    describe("specifying the collection type", function() {
+      var Comments
+
+      beforeEach(function() {
+        Comments = Backbone.Collection.extend({ model: Comment })
+
+        Post = Backbone.NestedAttributesModel.extend({
+          relations: [
+            {
+              key:  'comments',
+              collectionType: function () { return Comments }
+            }
+          ]
+        })
+
+        model = new Post({ title: 'Some Title', comments: [{ body: 'some comment' }] })
+      })
+
+      it("uses the given collection as the relation attribute", function() {
+        expect(model.get('comments')).toBeAnInstanceOf(Comments)
+        expect(model.get('comments').at(0)).toBeAnInstanceOf(Comment)
+      })
+    })
+
+    describe("#toJSON()", function() {
+      beforeEach(function() {
+        model = new Post({ title: 'Some Title', comments: [{ body: 'some comment' }] })
+      })
+
+      it("serializes the own attributes, as well as the relation", function() {
+        expect(model.toJSON()).toEqual({ title: 'Some Title', comments: [{ body: 'some comment' }] })
       })
     })
   })
