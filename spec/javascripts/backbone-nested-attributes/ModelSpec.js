@@ -590,7 +590,7 @@ describe("Backbone.NestedAttributesModel", function() {
                 model.get('comments').remove(comment)
                 model.save()
 
-                request = mostRecentAjaxRequest();
+                var request = mostRecentAjaxRequest();
                 request.response({status: 200, responseText: { title: 'Some Title', comments: [] }})
 
                 expect(model.toJSON({ nested: true })).toEqual({
