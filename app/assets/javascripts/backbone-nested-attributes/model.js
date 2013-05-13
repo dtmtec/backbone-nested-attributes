@@ -6,7 +6,11 @@
 
     if (attributes) {
       _(model.relations).each(function (relation) {
-        setNestedAttributeFor(model, relation, attributes)
+        if (relation.type == 'one') {
+          setHasOneNestedAttributeFor(model, relation, attributes)
+        } else {
+          setNestedAttributeFor(model, relation, attributes)
+        }
       })
     }
 
@@ -15,17 +19,30 @@
     return attributes
   }
 
+  function setHasOneNestedAttributeFor(model, relation, attributes) {
+    var key           = relation.key,
+        value         = attributes[key],
+        ModelClass    = _(relation).result('relatedModel')
+
+    if (value) {
+      value = value instanceof Backbone.Model ? value : new ModelClass(value)
+
+      configureEventBubbling(model, value, relation)
+      attributes[key] = value
+    }
+  }
+
   function setNestedAttributeFor(model, relation, attributes) {
     var key           = relation.key,
         value         = attributes[key],
         currentValue  = model.get(key),
-        collection    = currentValue || createNestedAttributeCollection(relation)
+        nested        = currentValue || createNestedAttributeCollection(relation)
 
     value = value instanceof Backbone.Collection ? value.slice() : value
 
-    configureEventBubbling(model, collection, relation)
-    collection.set(value)
-    attributes[key] = collection
+    configureEventBubbling(model, nested, relation)
+    nested.set(value)
+    attributes[key] = nested
 
     return attributes
   }
@@ -44,23 +61,26 @@
     }
   }
 
-  function configureEventBubbling(model, collection, relation) {
-    if (!collection._hasEventBubblingConfigured) {
-      model.listenTo(collection, 'add change nested:change remove', function (nestedModel, options) {
+  function configureEventBubbling(model, nested, relation) {
+    if (!nested._hasEventBubblingConfigured) {
+      model.listenTo(nested, 'add change nested:change remove', function (nestedModel, options) {
         model.trigger('nested:change change:' + relation.key, nestedModel, options)
       })
 
-      collection._hasEventBubblingConfigured = true
+      nested._hasEventBubblingConfigured = true
     }
   }
 
-  function clearNestedCollectionEvents(model) {
+  function clearNestedEvents(model) {
     _(model.relations).each(function (relation) {
-      var collection = model.get(relation.key)
+      var nested = model.get(relation.key)
 
-      model.stopListening(collection)
-      collection.off('remove', nestedModelRemoved, collection)
-      collection.deletedModels.reset()
+      model.stopListening(nested)
+      nested.off('remove', nestedModelRemoved, nested)
+
+      if (nested.deletedModels) {
+        nested.deletedModels.reset()
+      }
     }, model)
   }
 
@@ -68,17 +88,26 @@
     _(relations).each(function (relation) {
       var key     = relation.key,
           value   = json[key],
-          deleted = []
+          deleted = [],
+          jsonValue
 
       if (value) {
         if (options && options.nested) {
           delete json[key]
           key = key + '_attributes'
 
-          deleted = value.deletedModels.toJSON(options)
+          if (value.deletedModels) {
+            deleted = value.deletedModels.toJSON(options)
+          }
         }
 
-        json[key] = value.toJSON(options).concat(deleted)
+        jsonValue = value.toJSON(options)
+
+        if (_(jsonValue).isArray()) {
+          json[key] = jsonValue.concat(deleted)
+        } else {
+          json[key] = jsonValue
+        }
       }
     })
 
@@ -135,7 +164,7 @@
     },
 
     clear: function (options) {
-      clearNestedCollectionEvents(this)
+      clearNestedEvents(this)
       return BackboneModelPrototype.clear.apply(this, arguments)
     }
   })

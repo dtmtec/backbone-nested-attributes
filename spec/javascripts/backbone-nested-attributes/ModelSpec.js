@@ -1,5 +1,11 @@
 describe("Backbone.NestedAttributesModel", function() {
-  var model, Post, post, Comment, comment
+  var model,
+      Post,
+      post,
+      Comment,
+      comment,
+      Person,
+      author
 
   beforeEach(function() {
     model = new Backbone.NestedAttributesModel({})
@@ -7,6 +13,222 @@ describe("Backbone.NestedAttributesModel", function() {
 
   it("should be a Backbone.Model", function() {
     expect(model).toBeAnInstanceOf(Backbone.Model)
+  })
+
+  describe("with a has one relationship", function() {
+    beforeEach(function() {
+      Post = Backbone.NestedAttributesModel.extend({
+        relations: [
+          {
+            type: 'one',
+            key: 'author',
+            relatedModel: function () { return Person }
+          }
+        ]
+      })
+
+      Person = Backbone.NestedAttributesModel.extend({})
+    })
+
+    describe("when creating", function() {
+      it("does not initializes the author attribute", function() {
+        model = new Post
+        expect(model.get('author')).not.toBeDefined()
+      });
+
+      describe("while setting attributes", function() {
+        beforeEach(function() {
+          model = new Post({ title: 'Some Title', author: { name: 'Jon Snow'} })
+        })
+
+        it("sets the normal attributes", function() {
+          expect(model.get('title')).toEqual('Some Title')
+        })
+
+        it("creates the author model", function() {
+          author = model.get('author')
+
+          expect(author).toBeAnInstanceOf(Person)
+          expect(author.get('name')).toEqual('Jon Snow')
+        })
+
+        describe("passing a model to the relation attribute", function() {
+          beforeEach(function() {
+            author = new Person({ name: 'Jon Snow' })
+            model = new Post({ title: 'Some Title', author: author })
+          })
+
+          it("store the given model in the relation attribute", function() {
+            expect(model.get('author')).toBe(author)
+          })
+        })
+      })
+    })
+
+    describe("when updating", function() {
+      beforeEach(function() {
+        model = new Post
+      })
+
+      it("store the given model in the relation attribute", function() {
+        model.set({ author: { name: 'Jon Snow' } })
+
+        author = model.get('author')
+
+        expect(author).toBeAnInstanceOf(Person)
+        expect(author.get('name')).toEqual('Jon Snow')
+      })
+
+      it("allows passing key, value when setting a relation attribute", function() {
+        model.set('author', { name: 'Jon Snow' })
+
+        author = model.get('author')
+
+        expect(author).toBeAnInstanceOf(Person)
+        expect(author.get('name')).toEqual('Jon Snow')
+      })
+
+      describe("passing a model to the relation attribute", function() {
+        beforeEach(function() {
+          author = new Person({ name: 'Jon Snow' })
+          model = new Post
+        })
+
+        it("store the given model in the relation attribute", function() {
+          model.set({ title: 'Some title', author: author })
+          expect(model.get('author')).toBe(author)
+        })
+      })
+    })
+
+    describe("cloning", function() {
+      beforeEach(function() {
+        post = new Post({ title: 'Some Title', author: { name: 'Jon Snow' } })
+      })
+
+      it("creates a new post object, with the same attributes, including nested has one relations, that are not shared", function() {
+        var newPost = post.clone()
+
+        expect(newPost).not.toBe(post)
+        expect(newPost.get('author')).not.toBe(post.get('author'))
+
+        expect(newPost.get('title')).toEqual(post.get('title'))
+        expect(newPost.get('author').get('name')).toEqual(post.get('author').get('name'))
+      })
+    })
+
+    describe("event bubbling", function() {
+      var changedModel, changedCount
+
+      beforeEach(function() {
+        changedCount = 0
+        changedModel = undefined
+
+        model = new Post({ title: 'Some Title', author: { name: 'Jon Snow' } })
+        author = model.get('author')
+      })
+
+      describe("when a nested model is changed", function() {
+        it("triggers a nested:change event on the parent, with the changed model as an argument", function() {
+          model.on('nested:change', function (model) {
+            changedModel = model
+          })
+
+          author.set({ name: 'Robb Stark' })
+          expect(changedModel).toBe(author)
+        })
+
+        it("triggers a nested:change only once, after setting nested attributes again", function() {
+          model.set({ title: 'Some Title', author: { name: 'Jon Snow' } })
+          author = model.get('author')
+
+          model.on('nested:change', function (model) {
+            changedModel = model
+            changedCount += 1
+          })
+
+          author.set({ name: 'Robb Stark' })
+          expect(changedModel).toBe(author)
+          expect(changedCount).toEqual(1)
+        })
+
+        it("triggers a change:<relationKey> event on the parent, with the changed model as an argument", function() {
+          model.on('change:author', function (model) {
+            changedModel = model
+          })
+
+          author.set({ name: 'Robb Stark' })
+          expect(changedModel).toBe(author)
+        })
+
+        it("triggers a change:<relationKey> only once, after setting nested attributes again", function() {
+          model.set({ title: 'Some Title', author: { body: 'Jon Snow' } })
+          author = model.get('author')
+
+          model.on('change:author', function (model) {
+            changedModel = model
+            changedCount += 1
+          })
+
+          author.set({ name: 'Robb Stark' })
+          expect(changedModel).toBe(author)
+          expect(changedCount).toEqual(1)
+        })
+
+        describe("and the nested model triggers a nested:change", function() {
+          it("triggers a nested:change on the parent", function() {
+            model.on('nested:change', function (model) {
+              changedModel = model
+            })
+
+            author.trigger('nested:change', author)
+            expect(changedModel).toBe(author)
+          })
+        })
+      })
+
+      describe("when clearing", function() {
+        it("stops listening to relation nested:change events", function() {
+          model.on('nested:change', function (model) {
+            changedModel = model
+          })
+
+          model.clear()
+          author.set({ name: 'Robb Stark' })
+          expect(changedModel).toBeUndefined()
+        })
+
+        it("stops listening to relation change:<relationKey> events", function() {
+          model.clear()
+
+          model.on('change:author', function (model) {
+            changedModel = model
+          })
+
+          author.set({ name: 'Robb Stark' })
+          expect(changedModel).toBeUndefined()
+        })
+      })
+    })
+
+    describe("toJSON", function() {
+      beforeEach(function() {
+        model = new Post({ title: 'Some Title', author: { name: 'Jon Snow' } })
+      })
+
+      it("serializes its own attributes, as well as the relation ones", function() {
+        expect(model.toJSON()).toEqual({ title: 'Some Title', author: { name: 'Jon Snow' } })
+      })
+
+      describe("with nested attributes support", function() {
+        it("serializes the relation attributes with a _attributes suffix", function() {
+          expect(model.toJSON({ nested: true })).toEqual({
+            title: 'Some Title',
+            author_attributes: { name: 'Jon Snow' }
+          })
+        })
+      })
+    })
   })
 
   describe("with a has many relationship", function() {
@@ -311,7 +533,7 @@ describe("Backbone.NestedAttributesModel", function() {
         model = new Post({ title: 'Some Title', comments: [{ body: 'some comment' }] })
       })
 
-      it("serializes the own attributes, as well as the relation", function() {
+      it("serializes its own attributes, as well as the relation one", function() {
         expect(model.toJSON()).toEqual({ title: 'Some Title', comments: [{ body: 'some comment' }] })
       })
 
