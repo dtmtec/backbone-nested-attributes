@@ -329,6 +329,13 @@ describe("Backbone.NestedAttributesModel", function() {
         expect(comment.get('body')).toEqual('some comment')
       })
 
+      it("allows one to update non-nested attributes without modifying nested ones", function() {
+        model = new Post({ title: 'new title', comments: [{ body: 'some comment' }] })
+        model.set('title', 'other title')
+        expect(model.get('title')).toEqual('other title')
+        expect(model.get('comments').length).toEqual(1)
+      })
+
       describe("passing a collection to a relation attribute", function() {
         var comments, Comments
 

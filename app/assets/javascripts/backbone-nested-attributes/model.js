@@ -41,7 +41,11 @@
     value = value instanceof Backbone.Collection ? value.slice() : value
 
     configureEventBubbling(model, nested, relation)
-    nested.set(value)
+
+    if (value) {
+      nested.set(value)
+    }
+
     attributes[key] = nested
 
     return attributes
