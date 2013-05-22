@@ -1,4 +1,6 @@
 require "backbone-nested-attributes/engine"
 
-module Backbone::Nested::Attributes
+module Backbone
+  module NestedAttributes
+  end
 end

@@ -5,7 +5,7 @@ require 'backbone-nested-attributes/version'
 
 Gem::Specification.new do |gem|
   gem.name          = "backbone-nested-attributes"
-  gem.version       = Backbone::Nested::Attributes::VERSION
+  gem.version       = Backbone::NestedAttributes::VERSION
   gem.authors       = ["Vicente Mundim"]
   gem.email         = ["vicente.mundim@gmail.com"]
   gem.description   = %q{Add nested attributes to your Backbone models}

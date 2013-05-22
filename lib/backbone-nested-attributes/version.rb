@@ -1,7 +1,5 @@
 module Backbone
-  module Nested
-    module Attributes
-      VERSION = "0.1.0"
-    end
+  module NestedAttributes
+    VERSION = "0.2.0"
   end
 end
