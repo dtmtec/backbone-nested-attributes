@@ -51,16 +51,21 @@
     return attributes
   }
 
-  function configureNestedAttributesEvents(model) {
-    if (!model._hasNestedAttributesEventsConfigured) {
-      model.on('sync', function () {
-        _(model.relations).each(function (relation) {
-          var collection = model.get(relation.key)
+  function clearDeletedModelsFor(model) {
+    _(model.relations).each(function (relation) {
+      var collection = model.get(relation.key)
 
-          collection.deletedModels.reset()
-        })
+      collection.each(function (nestedModel) {
+        clearDeletedModelsFor(nestedModel)
       })
 
+      collection.deletedModels.reset()
+    })
+  }
+
+  function configureNestedAttributesEvents(model) {
+    if (!model._hasNestedAttributesEventsConfigured) {
+      model.on('sync', clearDeletedModelsFor)
       model._hasNestedAttributesEventsConfigured = true
     }
   }
