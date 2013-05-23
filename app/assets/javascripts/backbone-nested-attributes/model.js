@@ -35,10 +35,11 @@
   function setNestedAttributeFor(model, relation, attributes) {
     var key           = relation.key,
         value         = attributes[key],
+        deletedValue  = attributes['deleted_' + key],
         currentValue  = model.get(key),
         nested        = currentValue || createNestedAttributeCollection(relation)
 
-    value = value instanceof Backbone.Collection ? value.slice() : value
+    value = valueOrSliceCollection(value)
 
     configureEventBubbling(model, nested, relation)
 
@@ -46,9 +47,20 @@
       nested.set(value)
     }
 
+    if (deletedValue) {
+      delete attributes['deleted_' + key]
+
+      deletedValue = valueOrSliceCollection(deletedValue)
+      nested.deletedModels.set(deletedValue)
+    }
+
     attributes[key] = nested
 
     return attributes
+  }
+
+  function valueOrSliceCollection(value) {
+    return value instanceof Backbone.Collection ? value.slice() : value
   }
 
   function clearDeletedModelsFor(model) {
@@ -101,12 +113,20 @@
           jsonValue
 
       if (value) {
-        if (options && options.nested) {
-          delete json[key]
-          key = key + '_attributes'
+        if (options) {
+          if (options.withDeleted) {
+            if (value.deletedModels) {
+              json['deleted_' + key] = value.deletedModels.toJSON(options)
+            }
+          }
 
-          if (value.deletedModels) {
-            deleted = value.deletedModels.toJSON(options)
+          if (options.nested) {
+            if (value.deletedModels) {
+              deleted = value.deletedModels.toJSON(options)
+            }
+
+            delete json[key]
+            key = key + '_attributes'
           }
         }
 
@@ -130,15 +150,16 @@
     collection.model = _(relation).result('relatedModel') || collection.model
 
     collection.deletedModels = new Backbone.Collection
-    collection.on('remove', nestedModelRemoved, collection)
+    collection.deletedModels.model = collection.model
+    collection.on('remove', nestedModelRemoved)
 
     return collection
   }
 
-  function nestedModelRemoved(model) {
+  function nestedModelRemoved(model, collection) {
     if (!model.isNew()) {
       model.set({ _destroy: true })
-      this.deletedModels.add(model) // this refers to the collection
+      collection.deletedModels.add(model)
     }
   }
 

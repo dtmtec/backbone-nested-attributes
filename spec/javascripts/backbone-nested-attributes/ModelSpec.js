@@ -285,6 +285,26 @@ describe("Backbone.NestedAttributesModel", function() {
             expect(model.get('comments').at(1)).toBe(comments.at(1))
           })
         })
+
+        describe("passing a deleted_<collection> attribute", function() {
+          var comments
+
+          beforeEach(function() {
+            model = new Post({ title: 'Some Title', deleted_comments: [{ id: 123, body: "some deleted comment", _destroy: true }] })
+          })
+
+          it("does not save this key as an attribute", function() {
+            expect(model.get('deleted_comments')).toBeUndefined()
+          })
+
+          it("adds the models in the deleted_comments attribute to the deletedModels collection inside the relation collection", function() {
+            comments = model.get('comments')
+            expect(comments.deletedModels.at(0)).toBeAnInstanceOf(Comment)
+            expect(comments.deletedModels.at(0).get('id')).toEqual(123)
+            expect(comments.deletedModels.at(0).get('body')).toEqual('some deleted comment')
+            expect(comments.deletedModels.at(0).get('_destroy')).toBeTruthy()
+          })
+        })
       })
     })
 
@@ -353,6 +373,29 @@ describe("Backbone.NestedAttributesModel", function() {
           expect(model.get('comments')).toBe(originalCollection)
           expect(model.get('comments').at(0)).toBe(comments.at(0))
           expect(model.get('comments').at(1)).toBe(comments.at(1))
+        })
+      })
+
+      describe("passing a deleted_<collection> attribute", function() {
+        var comments
+
+        beforeEach(function() {
+          model = new Post({ title: 'Some Title' })
+        })
+
+        it("does not save this key as an attribute", function() {
+          model.set({ deleted_comments: [{ id: 123, body: "some deleted comment", _destroy: true }] })
+          expect(model.get('deleted_comments')).toBeUndefined()
+        })
+
+        it("adds the models in the deleted_comments attribute to the deletedModels collection inside the relation collection", function() {
+          model.set({ deleted_comments: [{ id: 123, body: "some deleted comment", _destroy: true }] })
+          comments = model.get('comments')
+
+          expect(comments.deletedModels.at(0)).toBeAnInstanceOf(Comment)
+          expect(comments.deletedModels.at(0).get('id')).toEqual(123)
+          expect(comments.deletedModels.at(0).get('body')).toEqual('some deleted comment')
+          expect(comments.deletedModels.at(0).get('_destroy')).toBeTruthy()
         })
       })
     })
@@ -617,6 +660,37 @@ describe("Backbone.NestedAttributesModel", function() {
                   comments_attributes: []
                 })
               })
+            })
+          })
+        })
+      })
+
+      describe("with deleted models", function() {
+        beforeEach(function() {
+          model = new Post({ id: 321, title: 'Some Title', comments: [{ id: 123, body: 'some comment' }] })
+          comment = model.get('comments').at(0)
+        })
+
+        it("serializes the deleted models in a relation in a delete_<relation> key", function() {
+          model.get('comments').remove(comment)
+
+          expect(model.toJSON({ withDeleted: true })).toEqual({
+            id: 321,
+            title: 'Some Title',
+            comments: [],
+            deleted_comments: [ {id: 123, body: 'some comment', _destroy: true} ]
+          })
+        })
+
+        describe("and nested attributes support", function() {
+          it("serializes the deleted models in a relation in a delete_<relation> key", function() {
+            model.get('comments').remove(comment)
+
+            expect(model.toJSON({ withDeleted: true, nested: true })).toEqual({
+              id: 321,
+              title: 'Some Title',
+              comments_attributes: [{ id: 123, body: 'some comment', _destroy: true }],
+              deleted_comments: [ { id: 123, body: 'some comment', _destroy: true } ]
             })
           })
         })

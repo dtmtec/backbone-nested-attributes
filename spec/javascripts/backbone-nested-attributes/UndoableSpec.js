@@ -293,6 +293,14 @@ describe("Backbone.UndoableModel", function() {
     })
   })
 
+  describe("when an attribute is added", function() {
+    it("unsets this attribute on undo", function() {
+      model.set({ newAttr: 'foo' })
+      model.undo()
+      expect(model.has('newAttr')).toBeFalsy()
+    })
+  })
+
   describe("when it has a has one relationship", function() {
     beforeEach(function() {
       Post = Backbone.UndoableModel.extend({
@@ -483,6 +491,73 @@ describe("Backbone.UndoableModel", function() {
 
         comment.undo()
         expect(called).toBeTruthy()
+      })
+    })
+
+
+    describe("when undoing changes after a nested model had been removed", function() {
+      beforeEach(function() {
+        originalAttributes = { id: 321, title: 'some title', comments: [ { id: 123, body: 'some body' } ] }
+        post = new Post(_(originalAttributes).clone())
+        comments = post.get('comments')
+        comment = comments.at(0)
+
+        comments.remove(comment)
+      })
+
+      it("undoes the deletedModels in the relation collection as well", function() {
+        post.undo()
+        expect(comments.deletedModels.length).toEqual(0)
+      })
+
+      describe("and the state saved", function() {
+        beforeEach(function() {
+          post.saveState()
+        })
+
+        it("keeps the deletedModels in the relation collection", function() {
+          post.undo()
+          expect(comments.deletedModels.at(0)).toBe(comment)
+        })
+      })
+    })
+
+    describe("when undoing changes after a undo", function() {
+      it("reverts the changes properly", function() {
+        post.set({ comments: [{ id: 123, body: 'first body' }] })
+        post.undo()
+        post.set({ comments: [{ id: 123, body: 'last body' }] })
+        post.undo()
+        expect(post.get('comments').at(0).get('body')).toEqual('some body')
+      })
+
+      describe("on a deep nested model", function() {
+        var Tag, tag
+
+        beforeEach(function() {
+          Comment = Backbone.UndoableModel.extend({
+            relations: [
+              {
+                key: 'tags',
+                relatedModel: function () { return Tag }
+              }
+            ]
+          })
+
+          Tag = Backbone.UndoableModel.extend({})
+
+          originalAttributes = { id: 321, title: 'some title', comments: [ { id: 123, body: 'some body', tags: [ { id: 456, name: 'javascript' } ] } ] }
+          post = new Post(originalAttributes)
+        })
+
+        it("reverts the changes properly", function() {
+          post.set({ comments: [ { id: 123, body: 'some body', tags: [ { id: 456, name: 'ruby' } ] } ] })
+          post.undo()
+          post.set({ comments: [ { id: 123, body: 'some body', tags: [ { id: 456, name: 'python' } ] } ] })
+          post.undo()
+
+          expect(post.get('comments').at(0).get('tags').at(0).get('name')).toEqual('javascript')
+        })
       })
     })
   })

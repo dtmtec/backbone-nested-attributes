@@ -16,17 +16,34 @@
     },
 
     save: function () {
-      this.attributes = this.model.toJSON()
-      this.changed = false
+      this.updateAttributes()
 
       this.model.trigger('state:store')
     },
 
     undo: function () {
+      this.attributesToUnset().each(function (attribute) {
+        this.model.unset(attribute)
+      }, this)
+
       this.model.set(this.attributes)
-      this.changed = false
+
+      this.updateAttributes()
 
       this.model.trigger('state:restore')
+    },
+
+    attributesToUnset: function () {
+      var previousAttributes = _(this.attributes || {}).keys()
+
+      return _(this.model.attributes).chain().keys().select(function (attribute) {
+        return !_(previousAttributes).include(attribute)
+      })
+    },
+
+    updateAttributes: function () {
+      this.attributes = this.model.toJSON({ withDeleted: true })
+      this.changed = false
     }
   })
 
