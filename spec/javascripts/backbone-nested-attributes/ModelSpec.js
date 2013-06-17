@@ -211,6 +211,22 @@ describe("Backbone.NestedAttributesModel", function() {
       })
     })
 
+    describe("when synchronizing", function() {
+      beforeEach(function() {
+        jasmine.Ajax.useMock()
+
+        model = new Post({ title: 'Some Title', author: { name: 'Jon Snow' } })
+        model.url = 'http://someapi.com'
+      })
+
+      it("does not raise errors", function() {
+        model.save()
+
+        var request = mostRecentAjaxRequest();
+        request.response({status: 200, responseText: { title: 'Some Title', comments: [] }}) // would raise error
+      })
+    })
+
     describe("toJSON", function() {
       beforeEach(function() {
         model = new Post({ title: 'Some Title', author: { name: 'Jon Snow' } })

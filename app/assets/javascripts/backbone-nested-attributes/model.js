@@ -65,13 +65,17 @@
 
   function clearDeletedModelsFor(model) {
     _(model.relations).each(function (relation) {
-      var collection = model.get(relation.key)
+      var collectionOrModel = model.get(relation.key)
 
-      collection.each(function (nestedModel) {
-        clearDeletedModelsFor(nestedModel)
-      })
+      if (collectionOrModel.each) {
+        collectionOrModel.each(function (nestedModel) {
+          clearDeletedModelsFor(nestedModel)
+        })
 
-      collection.deletedModels.reset()
+        if (collectionOrModel.deletedModels) {
+          collectionOrModel.deletedModels.reset()
+        }
+      }
     })
   }
 
