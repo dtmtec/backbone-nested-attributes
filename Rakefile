@@ -10,6 +10,12 @@ load 'rails/tasks/engine.rake'
 
 Bundler::GemHelper.install_tasks
 
+task :travis do
+  puts "Starting to run app:jasmine:ci..."
+  system("export DISPLAY=:99.0 && bundle exec rake app:jasmine:ci")
+  raise "#{cmd} failed!" unless $?.exitstatus == 0
+end
+
 task :jasmine => 'app:jasmine'
 
-task :default => 'app:jasmine:ci'
+task :default => :travis

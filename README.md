@@ -1,5 +1,10 @@
 # Backbone.NestedAttributesModel
 
+[![build status][1]][2]
+
+[1]: https://travis-ci.org/dtmtec/backbone-nested-attributes.png
+[2]: http://travis-ci.org/dtmtec/backbone-nested-attributes
+
 Add Rails-like nested attributes support for Backbone.Model.
 
 ## Installation
@@ -69,7 +74,7 @@ post.get('comments') // returns a Backbone.Collection of Comment models
 When saving data, you can choose whether to send attributes as usual, or with nested attributes support by giving `{ nested: true }` to `save`:
 
 ```javascript
-post.save({}, { nested: true }) 
+post.save({}, { nested: true })
 ```
 
 This will send data to the server like this:
