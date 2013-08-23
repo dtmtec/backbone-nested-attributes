@@ -67,7 +67,7 @@
     _(model.relations).each(function (relation) {
       var collectionOrModel = model.get(relation.key)
 
-      if (collectionOrModel.each) {
+      if (collectionOrModel && collectionOrModel.each) {
         collectionOrModel.each(function (nestedModel) {
           clearDeletedModelsFor(nestedModel)
         })
