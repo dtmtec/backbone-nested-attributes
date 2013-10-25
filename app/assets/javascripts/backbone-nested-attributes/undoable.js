@@ -74,4 +74,4 @@
       return this._undoableState = this._undoableState || new UndoableState(this)
     }
   })
-})(Backbone, _)
+})(Backbone, _);
