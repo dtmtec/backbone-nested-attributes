@@ -9,4 +9,4 @@ gem 'jquery-rails'
 
 gem 'backbone-on-rails'
 
-gem 'jasmine'
+gem 'jasmine', git: "https://github.com/pivotal/jasmine-gem.git"

@@ -12,7 +12,7 @@ describe("Backbone.NestedAttributesModel", function() {
   })
 
   it("should be a Backbone.Model", function() {
-    expect(model).toBeAnInstanceOf(Backbone.Model)
+    expect(model instanceof Backbone.Model).toBeTruthy()
   })
 
   describe("with a has one relationship", function() {
@@ -48,7 +48,7 @@ describe("Backbone.NestedAttributesModel", function() {
         it("creates the author model", function() {
           author = model.get('author')
 
-          expect(author).toBeAnInstanceOf(Person)
+          expect(author instanceof Person).toBeTruthy()
           expect(author.get('name')).toEqual('Jon Snow')
         })
 
@@ -75,7 +75,7 @@ describe("Backbone.NestedAttributesModel", function() {
 
         author = model.get('author')
 
-        expect(author).toBeAnInstanceOf(Person)
+        expect(author instanceof Person).toBeTruthy()
         expect(author.get('name')).toEqual('Jon Snow')
       })
 
@@ -84,7 +84,7 @@ describe("Backbone.NestedAttributesModel", function() {
 
         author = model.get('author')
 
-        expect(author).toBeAnInstanceOf(Person)
+        expect(author instanceof Person).toBeTruthy()
         expect(author.get('name')).toEqual('Jon Snow')
       })
 
@@ -213,17 +213,15 @@ describe("Backbone.NestedAttributesModel", function() {
 
     describe("when synchronizing", function() {
       beforeEach(function() {
-        jasmine.Ajax.useMock()
+        jasmine.Ajax.install()
+        jasmine.Ajax.stubRequest("http://someapi.com/posts").andReturn({status: 200, responseText: { title: 'Some Title', comments: [] }})
 
         model = new Post({ title: 'Some Title', author: { name: 'Jon Snow' } })
         model.url = 'http://someapi.com'
       })
 
       it("does not raise errors", function() {
-        model.save()
-
-        var request = mostRecentAjaxRequest();
-        request.response({status: 200, responseText: { title: 'Some Title', comments: [] }}) // would raise error
+        expect(function () { model.save() }).not.toThrow()
       })
     })
 
@@ -265,7 +263,7 @@ describe("Backbone.NestedAttributesModel", function() {
       it("initializes the comments attribute with an empty collection", function() {
         model = new Post
         expect(model.get('comments')).toBeDefined()
-        expect(model.get('comments')).toBeAnInstanceOf(Backbone.Collection)
+        expect(model.get('comments') instanceof Backbone.Collection).toBeTruthy()
       });
 
       describe("while setting attributes", function() {
@@ -280,7 +278,7 @@ describe("Backbone.NestedAttributesModel", function() {
         it("creates the comment inside comments collection", function() {
           comment = model.get('comments').at(0)
 
-          expect(comment).toBeAnInstanceOf(Comment)
+          expect(comment instanceof Comment).toBeTruthy()
           expect(comment.get('body')).toEqual('some comment')
         })
 
@@ -295,8 +293,8 @@ describe("Backbone.NestedAttributesModel", function() {
 
           it("does not store the given collection, but instead creates a new one with models from the given collection", function() {
             expect(model.get('comments')).not.toBe(comments)
-            expect(model.get('comments')).not.toBeAnInstanceOf(Comments)
-            expect(model.get('comments')).toBeAnInstanceOf(Backbone.Collection)
+            expect(model.get('comments') instanceof Comments).toBeFalsy()
+            expect(model.get('comments') instanceof Backbone.Collection).toBeTruthy()
             expect(model.get('comments').at(0)).toBe(comments.at(0))
             expect(model.get('comments').at(1)).toBe(comments.at(1))
           })
@@ -315,7 +313,7 @@ describe("Backbone.NestedAttributesModel", function() {
 
           it("adds the models in the deleted_comments attribute to the deletedModels collection inside the relation collection", function() {
             comments = model.get('comments')
-            expect(comments.deletedModels.at(0)).toBeAnInstanceOf(Comment)
+            expect(comments.deletedModels.at(0) instanceof Comment).toBeTruthy()
             expect(comments.deletedModels.at(0).get('id')).toEqual(123)
             expect(comments.deletedModels.at(0).get('body')).toEqual('some deleted comment')
             expect(comments.deletedModels.at(0).get('_destroy')).toBeTruthy()
@@ -334,7 +332,7 @@ describe("Backbone.NestedAttributesModel", function() {
 
         comment = model.get('comments').at(0)
 
-        expect(comment).toBeAnInstanceOf(Comment)
+        expect(comment instanceof Comment).toBeTruthy()
         expect(comment.get('body')).toEqual('some comment')
       })
 
@@ -361,7 +359,7 @@ describe("Backbone.NestedAttributesModel", function() {
 
         comment = model.get('comments').at(0)
 
-        expect(comment).toBeAnInstanceOf(Comment)
+        expect(comment instanceof Comment).toBeTruthy()
         expect(comment.get('body')).toEqual('some comment')
       })
 
@@ -408,7 +406,7 @@ describe("Backbone.NestedAttributesModel", function() {
           model.set({ deleted_comments: [{ id: 123, body: "some deleted comment", _destroy: true }] })
           comments = model.get('comments')
 
-          expect(comments.deletedModels.at(0)).toBeAnInstanceOf(Comment)
+          expect(comments.deletedModels.at(0) instanceof Comment).toBeTruthy()
           expect(comments.deletedModels.at(0).get('id')).toEqual(123)
           expect(comments.deletedModels.at(0).get('body')).toEqual('some deleted comment')
           expect(comments.deletedModels.at(0).get('_destroy')).toBeTruthy()
@@ -452,8 +450,8 @@ describe("Backbone.NestedAttributesModel", function() {
       })
 
       it("uses the given collection as the relation attribute", function() {
-        expect(model.get('comments')).toBeAnInstanceOf(Comments)
-        expect(model.get('comments').at(0)).toBeAnInstanceOf(Comment)
+        expect(model.get('comments') instanceof Comments).toBeTruthy()
+        expect(model.get('comments').at(0) instanceof Comment).toBeTruthy()
       })
     })
 
@@ -648,16 +646,16 @@ describe("Backbone.NestedAttributesModel", function() {
 
             describe("after synchronizing the parent model", function() {
               beforeEach(function() {
-                jasmine.Ajax.useMock()
+                jasmine.Ajax.install()
                 model.url = 'http://someapi.com'
               })
 
               it("is not serialized on the relation", function() {
                 model.get('comments').remove(comment)
-                model.save()
 
-                var request = mostRecentAjaxRequest();
-                request.response({status: 200, responseText: { title: 'Some Title', comments: [] }})
+                jasmine.Ajax.stubRequest("http://someapi.com").andReturn({status: 200, responseText: { title: 'Some Title', comments: [] }})
+
+                model.save()
 
                 expect(model.toJSON({ nested: true })).toEqual({
                   title: 'Some Title',

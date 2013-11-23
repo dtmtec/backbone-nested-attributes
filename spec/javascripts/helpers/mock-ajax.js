@@ -1,207 +1,265 @@
 /*
- Jasmine-Ajax : a set of helpers for testing AJAX requests under the Jasmine
- BDD framework for JavaScript.
 
- Supports both Prototype.js and jQuery.
+Jasmine-Ajax : a set of helpers for testing AJAX requests under the Jasmine
+BDD framework for JavaScript.
 
- http://github.com/pivotal/jasmine-ajax
+http://github.com/pivotal/jasmine-ajax
 
- Jasmine Home page: http://pivotal.github.com/jasmine
+Jasmine Home page: http://pivotal.github.com/jasmine
 
- Copyright (c) 2008-2010 Pivotal Labs
+Copyright (c) 2008-2013 Pivotal Labs
 
- Permission is hereby granted, free of charge, to any person obtaining
- a copy of this software and associated documentation files (the
- "Software"), to deal in the Software without restriction, including
- without limitation the rights to use, copy, modify, merge, publish,
- distribute, sublicense, and/or sell copies of the Software, and to
- permit persons to whom the Software is furnished to do so, subject to
- the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
 
- The above copyright notice and this permission notice shall be
- included in all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
- LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
- OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
- WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
- */
+*/
 
-// Jasmine-Ajax interface
-var ajaxRequests = [];
-
-function mostRecentAjaxRequest() {
-  if (ajaxRequests.length > 0) {
-    return ajaxRequests[ajaxRequests.length - 1];
-  } else {
-    return null;
+(function() {
+  function extend(destination, source) {
+    for (var property in source) {
+      destination[property] = source[property];
+    }
+    return destination;
   }
-}
 
-function clearAjaxRequests() {
-  ajaxRequests = [];
-}
+  function MockAjax(global) {
+    var requestTracker = new RequestTracker(),
+      stubTracker = new StubTracker(),
+      realAjaxFunction = global.XMLHttpRequest,
+      mockAjaxFunction = fakeRequest(requestTracker, stubTracker);
 
-// Fake XHR for mocking Ajax Requests & Responses
-function FakeXMLHttpRequest() {
-  var extend = Object.extend || $.extend;
-  extend(this, {
-    requestHeaders: {},
+    this.install = function() {
+      global.XMLHttpRequest = mockAjaxFunction;
+    };
 
-    open: function() {
-      this.method = arguments[0];
-      this.url = arguments[1];
-      this.readyState = 1;
-    },
+    this.uninstall = function() {
+      global.XMLHttpRequest = realAjaxFunction;
 
-    setRequestHeader: function(header, value) {
-      this.requestHeaders[header] = value;
-    },
+      this.stubs.reset();
+      this.requests.reset();
+    };
 
-    abort: function() {
-      this.readyState = 0;
-    },
+    this.stubRequest = function(url) {
+      var stub = new RequestStub(url);
+      stubTracker.addStub(stub);
+      return stub;
+    };
 
-    readyState: 0,
+    this.withMock = function(closure) {
+      this.install();
+      try {
+        closure();
+      } finally {
+        this.uninstall();
+      }
+    };
 
-    onreadystatechange: function(isTimeout) {
-    },
+    this.requests = requestTracker;
+    this.stubs = stubTracker;
+  }
 
-    status: null,
+  function StubTracker() {
+    var stubs = [];
 
-    send: function(data) {
-      this.params = data;
-      this.readyState = 2;
-    },
+    this.addStub = function(stub) {
+      stubs.push(stub);
+    };
 
-    getResponseHeader: function(name) {
-      return this.responseHeaders[name];
-    },
+    this.reset = function() {
+      stubs = [];
+    };
 
-    getAllResponseHeaders: function() {
-      var responseHeaders = [];
-      for (var i in this.responseHeaders) {
-        if (this.responseHeaders.hasOwnProperty(i)) {
-          responseHeaders.push(i + ': ' + this.responseHeaders[i]);
+    this.findStub = function(url) {
+      for (var i = stubs.length - 1; i >= 0; i--) {
+        var stub = stubs[i];
+        if (stub.url === url) {
+          return stub;
         }
       }
-      return responseHeaders.join('\r\n');
-    },
+    };
+  }
 
-    responseText: null,
-
-    response: function(response) {
-      this.status = response.status;
-      this.responseText = response.responseText || "";
-      this.readyState = 4;
-      this.responseHeaders = response.responseHeaders ||
-      {"Content-type": response.contentType || "application/json" };
-      // uncomment for jquery 1.3.x support
-      // jasmine.Clock.tick(20);
-
-      this.onreadystatechange();
-    },
-    responseTimeout: function() {
-      this.readyState = 4;
-      jasmine.Clock.tick(jQuery.ajaxSettings.timeout || 30000);
-      this.onreadystatechange('timeout');
+  function fakeRequest(requestTracker, stubTracker) {
+    function FakeXMLHttpRequest() {
+      requestTracker.track(this);
     }
-  });
 
-  return this;
-}
+    extend(FakeXMLHttpRequest.prototype, window.XMLHttpRequest);
+    extend(FakeXMLHttpRequest.prototype, {
+      requestHeaders: {},
 
+      open: function() {
+        this.method = arguments[0];
+        this.url = arguments[1];
+        this.username = arguments[3];
+        this.password = arguments[4];
+        this.readyState = 1;
+      },
 
-jasmine.Ajax = {
+      setRequestHeader: function(header, value) {
+        this.requestHeaders[header] = value;
+      },
 
-  isInstalled: function() {
-    return jasmine.Ajax.installed == true;
-  },
+      abort: function() {
+        this.readyState = 0;
+        this.status = 0;
+        this.statusText = "abort";
+      },
 
-  assertInstalled: function() {
-    if (!jasmine.Ajax.isInstalled()) {
-      throw new Error("Mock ajax is not installed, use jasmine.Ajax.useMock()")
-    }
-  },
+      readyState: 0,
 
-  useMock: function() {
-    if (!jasmine.Ajax.isInstalled()) {
-      var spec = jasmine.getEnv().currentSpec;
-      spec.after(jasmine.Ajax.uninstallMock);
+      onload: function() {
+      },
 
-      jasmine.Ajax.installMock();
-    }
-  },
+      onreadystatechange: function(isTimeout) {
+      },
 
-  installMock: function() {
-    if (typeof jQuery != 'undefined') {
-      jasmine.Ajax.installJquery();
-    } else if (typeof Prototype != 'undefined') {
-      jasmine.Ajax.installPrototype();
-    } else {
-      throw new Error("jasmine.Ajax currently only supports jQuery and Prototype");
-    }
-    jasmine.Ajax.installed = true;
-  },
+      status: null,
 
-  installJquery: function() {
-    jasmine.Ajax.mode = 'jQuery';
-    jasmine.Ajax.real = jQuery.ajaxSettings.xhr;
-    jQuery.ajaxSettings.xhr = jasmine.Ajax.jQueryMock;
+      send: function(data) {
+        this.params = data;
+        this.readyState = 2;
 
-  },
+        var stub = stubTracker.findStub(this.url);
+        if (stub) {
+          this.response(stub);
+        }
+      },
 
-  installPrototype: function() {
-    jasmine.Ajax.mode = 'Prototype';
-    jasmine.Ajax.real = Ajax.getTransport;
+      data: function() {
+        var data = {};
+        if (typeof this.params !== 'string') { return data; }
+        var params = this.params.split('&');
 
-    Ajax.getTransport = jasmine.Ajax.prototypeMock;
-  },
+        for (var i = 0; i < params.length; ++i) {
+          var kv = params[i].replace(/\+/g, ' ').split('=');
+          var key = decodeURIComponent(kv[0]);
+          data[key] = data[key] || [];
+          data[key].push(decodeURIComponent(kv[1]));
+          data[key].sort();
+        }
+        return data;
+      },
 
-  uninstallMock: function() {
-    jasmine.Ajax.assertInstalled();
-    if (jasmine.Ajax.mode == 'jQuery') {
-      jQuery.ajaxSettings.xhr = jasmine.Ajax.real;
-    } else if (jasmine.Ajax.mode == 'Prototype') {
-      Ajax.getTransport = jasmine.Ajax.real;
-    }
-    jasmine.Ajax.reset();
-  },
+      getResponseHeader: function(name) {
+        return this.responseHeaders[name];
+      },
 
-  reset: function() {
-    jasmine.Ajax.installed = false;
-    jasmine.Ajax.mode = null;
-    jasmine.Ajax.real = null;
-  },
+      getAllResponseHeaders: function() {
+        var responseHeaders = [];
+        for (var i in this.responseHeaders) {
+          if (this.responseHeaders.hasOwnProperty(i)) {
+            responseHeaders.push(i + ': ' + this.responseHeaders[i]);
+          }
+        }
+        return responseHeaders.join('\r\n');
+      },
 
-  jQueryMock: function() {
-    var newXhr = new FakeXMLHttpRequest();
-    ajaxRequests.push(newXhr);
-    return newXhr;
-  },
+      responseText: null,
 
-  prototypeMock: function() {
-    return new FakeXMLHttpRequest();
-  },
+      response: function(response) {
+        this.status = response.status;
+        this.statusText = response.statusText || "";
+        this.responseText = response.responseText || "";
+        this.readyState = 4;
+        this.responseHeaders = response.responseHeaders ||
+          {"Content-type": response.contentType || "application/json" };
 
-  installed: false,
-  mode: null
-}
+        this.onload();
+        this.onreadystatechange();
+      },
 
+      responseTimeout: function() {
+        this.readyState = 4;
+        jasmine.clock().tick(30000);
+        this.onreadystatechange('timeout');
+      }
+    });
 
-// Jasmine-Ajax Glue code for Prototype.js
-if (typeof Prototype != 'undefined' && Ajax && Ajax.Request) {
-  Ajax.Request.prototype.originalRequest = Ajax.Request.prototype.request;
-  Ajax.Request.prototype.request = function(url) {
-    this.originalRequest(url);
-    ajaxRequests.push(this);
-  };
+    return FakeXMLHttpRequest;
+  }
 
-  Ajax.Request.prototype.response = function(responseOptions) {
-    return this.transport.response(responseOptions);
-  };
-}
+  function RequestTracker() {
+    var requests = [];
+
+    this.track = function(request) {
+      requests.push(request);
+    };
+
+    this.first = function() {
+      return requests[0];
+    };
+
+    this.count = function() {
+      return requests.length;
+    };
+
+    this.reset = function() {
+      requests = [];
+    };
+
+    this.mostRecent = function() {
+      return requests[requests.length - 1];
+    };
+
+    this.at = function(index) {
+      return requests[index];
+    };
+
+    this.filter = function(url_to_match) {
+      if (requests.length == 0) return [];
+      var matching_requests = [];
+
+      for (var i = 0; i < requests.length; i++) {
+        if (url_to_match instanceof RegExp &&
+            url_to_match.test(requests[i].url)) {
+            matching_requests.push(requests[i]);
+        } else if (url_to_match instanceof Function &&
+            url_to_match(requests[i])) {
+            matching_requests.push(requests[i]);
+        } else {
+          if (requests[i].url == url_to_match) {
+            matching_requests.push(requests[i]);
+          }
+        }
+      }
+
+      return matching_requests;
+    };
+  }
+
+  function RequestStub(url) {
+    this.url = url;
+
+    this.andReturn = function(options) {
+      this.status = options.status || 200;
+
+      this.contentType = options.contentType;
+      this.responseText = options.responseText;
+    };
+  }
+
+  if (typeof window === "undefined" && typeof exports === "object") {
+    exports.MockAjax = MockAjax;
+    jasmine.Ajax = new MockAjax(exports);
+  } else {
+    window.MockAjax = MockAjax;
+    jasmine.Ajax = new MockAjax(window);
+  }
+}());

@@ -12,7 +12,7 @@ describe("Backbone.UndoableModel", function() {
       Person
 
   beforeEach(function() {
-    jasmine.Ajax.useMock()
+    jasmine.Ajax.install()
     called = false
 
     originalAttributes = { title: 'some title', body: 'some body' }
@@ -20,13 +20,12 @@ describe("Backbone.UndoableModel", function() {
     model.url = 'http://someapi.com'
   })
 
-  function performSync(model) {
-    var request = mostRecentAjaxRequest();
-    request.response({status: 200, responseText: model.toJSON()})
+  function stubSyncFor(model) {
+    jasmine.Ajax.stubRequest('http://someapi.com').andReturn({ status: 200, responseText: model.toJSON() })
   }
 
   it("should be a Backbone.NestedAttributesModel", function() {
-    expect(model).toBeAnInstanceOf(Backbone.NestedAttributesModel)
+    expect(model instanceof Backbone.NestedAttributesModel).toBeTruthy()
   })
 
   describe("when the initialize method is overriden", function() {
@@ -138,16 +137,19 @@ describe("Backbone.UndoableModel", function() {
       describe("and then sync", function() {
         it("should not have changes since sync", function() {
           model.set({ title: 'new title', body: 'new body' })
+
+          stubSyncFor(model)
           model.save()
-          performSync(model)
+
           expect(model.hasChangedSinceSync()).toBeFalsy()
         })
 
         describe("then undo", function() {
           it("reverts the model own attributes to their value right after sync", function() {
             model.set({ title: 'sync title', body: 'sync body' })
+
+            stubSyncFor(model)
             model.save()
-            performSync(model)
 
             afterSyncAttributes = model.toJSON()
 
@@ -193,16 +195,19 @@ describe("Backbone.UndoableModel", function() {
       describe("and then sync", function() {
         it("should not have changes since sync", function() {
           model.set({ title: 'new title', body: 'new body' })
+
+          stubSyncFor(model)
           model.save()
-          performSync(model)
+
           expect(model.hasChangedSinceSync()).toBeFalsy()
         })
 
         describe("then undo", function() {
           it("reverts the model own attributes to their value right after sync", function() {
             model.set({ title: 'sync title', body: 'sync body' })
+
+            stubSyncFor(model)
             model.save()
-            performSync(model)
 
             afterSyncAttributes = model.toJSON()
 
@@ -239,8 +244,9 @@ describe("Backbone.UndoableModel", function() {
         called = true
       })
 
+      stubSyncFor(model)
       model.save()
-      performSync(model)
+
       expect(called).toBeTruthy()
     })
 
@@ -250,8 +256,9 @@ describe("Backbone.UndoableModel", function() {
           called = true
         })
 
+        stubSyncFor(model)
         model.save()
-        performSync(model)
+
         expect(called).toBeTruthy()
       })
 
@@ -260,8 +267,9 @@ describe("Backbone.UndoableModel", function() {
           called = true
         })
 
+        stubSyncFor(model)
         model.destroy()
-        performSync(model)
+
         expect(called).toBeFalsy()
       })
     })
@@ -276,8 +284,9 @@ describe("Backbone.UndoableModel", function() {
           called = true
         })
 
+        stubSyncFor(model)
         model.save()
-        performSync(model)
+
         expect(called).toBeTruthy()
       })
 
@@ -286,8 +295,9 @@ describe("Backbone.UndoableModel", function() {
           called = true
         })
 
+        stubSyncFor(model)
         model.destroy()
-        performSync(model)
+
         expect(called).toBeTruthy()
       })
     })
