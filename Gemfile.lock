@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    backbone-nested-attributes (0.3.2)
+    backbone-nested-attributes (0.4.0)
       rails (>= 3.2.8)
 
 GEM
