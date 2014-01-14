@@ -1,0 +1,17 @@
+{
+  "name"          : "backbone-nested-attributes",
+  "description"   : "Add Rails-like nested attributes support for Backbone.Model.",
+  "url"           : "http://github.com/dtmtec/backbone-nested-attributes",
+  "keywords"      : ["model", "backbone", "nested attributes"],
+  "author"        : "Vicente Mundim <vicente.mundim@gmail.com>",
+  "dependencies"  : {
+    "backbone"  : ">=1.0.0"
+  },
+  "main"          : "dist/js/backbone-nested-attributes.js",
+  "version"       : "0.4.1",
+  "license"       : "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dtmtec/backbone-nested-attributes.git"
+  }
+}

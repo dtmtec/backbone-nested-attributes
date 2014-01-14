@@ -1,0 +1,21 @@
+{
+  "name": "backbone-nested-attributes",
+  "version": "0.4.1",
+  "main": "dist/js/backbone-nested-attributes.js",
+  "description": "Add Rails-like nested attributes support for Backbone.Model.",
+  "license": "MIT",
+  "ignore": [
+    ".ruby-gemset",
+    ".ruby-version",
+    ".travis.yml",
+    "*.gemspec",
+    "Rakefile",
+    "app/**/*",
+    "lib/**/*",
+    "pkg/**/*",
+    "spec/**/*"
+  ],
+  "dependencies": {
+    "backbone": ">=1.0.0"
+  }
+}
