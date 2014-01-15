@@ -1,6 +1,8 @@
 /**
  * Copyright (c) 2013-2014 Vicente Mundim
  *
+ * Version: 0.4.2
+ *
  * MIT License
  *
  * Permission is hereby granted, free of charge, to any person obtaining

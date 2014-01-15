@@ -16,7 +16,7 @@ task :build_js do
   Sprockets::Environment.new do |environment|
     environment.append_path "app/assets/javascripts"
 
-    environment['backbone-nested-attributes/all'].write_to "dist/js/backbone-nested-attributes.js"
+    environment['backbone-nested-attributes/all'].write_to "backbone-nested-attributes.js"
   end
 end
 
