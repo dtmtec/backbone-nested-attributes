@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2013-2014 Vicente Mundim
  *
- * Version: 0.4.3
+ * Version: 0.4.4
  *
  * MIT License
  *
