@@ -88,6 +88,16 @@ describe("Backbone.NestedAttributesModel", function() {
         expect(author.get('name')).toEqual('Jon Snow')
       })
 
+      it('pass options to original set', function (done) {
+        var called = false
+        model.on('change:title', function () { called = true })
+        model.set('title', 'My Title', { silent: true })
+        expect(called).toBeFalsy()
+
+        model.set({title: 'My New Title'}, { silent: true })
+        expect(called).toBeFalsy()
+      });
+
       describe("passing a model to the relation attribute", function() {
         beforeEach(function() {
           author = new Person({ name: 'Jon Snow' })
@@ -671,10 +681,7 @@ describe("Backbone.NestedAttributesModel", function() {
                 model.get('comments').remove(comment)
                 model.clear()
 
-                expect(model.toJSON({ nested: true })).toEqual({
-                  title: undefined,
-                  comments_attributes: []
-                })
+                expect(model.toJSON({ nested: true })).toEqual({})
               })
             })
           })
