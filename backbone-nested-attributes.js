@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2013-2014 Vicente Mundim
  *
- * Version: 0.4.2
+ * Version: 0.4.3
  *
  * MIT License
  *
@@ -34,9 +34,7 @@
 (function(Backbone, _) {
   var BackboneModelPrototype = Backbone.Model.prototype
 
-  function setNestedAttributes(model, key, value, options) {
-    var attributes = attributesFor(key, value, options)
-
+  function setNestedAttributes(model, attributes) {
     if (attributes) {
       _(model.relations).each(function (relation) {
         if (relation.type == 'one') {
@@ -218,8 +216,19 @@
 
   Backbone.NestedAttributesModel = Backbone.Model.extend({
     set: function (key, value, options) {
-      var attributes = setNestedAttributes(this, key, value, options)
-      return BackboneModelPrototype.set.call(this, attributes, options)
+      var attributes
+
+      // Duplicate backbone's behavior to allow separate key/value parameters,
+      // instead of a single 'attributes' object.
+      if (_.isObject(key) || key == null) {
+        attributes = key
+        options = value
+      } else {
+        attributes = {}
+        attributes[key] = value
+      }
+
+      return BackboneModelPrototype.set.call(this, setNestedAttributes(this, attributes), options)
     },
 
     toJSON: function (options) {
