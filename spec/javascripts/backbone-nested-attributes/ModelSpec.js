@@ -312,6 +312,22 @@ describe("Backbone.NestedAttributesModel", function() {
           })
         })
 
+        describe('passing a model in a collection with { _destroy: true }', function () {
+          beforeEach(function() {
+            model = new Post({ title: 'Some Title', comments: [{ body: 'some content' }, { id: '123', body: 'other content', _destroy: true }] })
+          })
+
+          it('do not add the model with { _destroy: true } to the relation collection', function () {
+            expect(model.get('comments').length).toBe(1)
+            expect(model.get('comments').at(0).get('body')).toBe('some content')
+          })
+
+          it('adds them to the deletedModels collection inside the relation collection', function () {
+            expect(model.get('comments').deletedModels.length).toBe(1)
+            expect(model.get('comments').deletedModels.at(0).get('body')).toBe('other content')
+          })
+        })
+
         describe("passing a deleted_<collection> attribute", function() {
           var comments
 

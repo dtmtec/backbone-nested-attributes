@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2013-2014 Vicente Mundim
  *
- * Version: 0.4.4
+ * Version: 0.5.0
  *
  * MIT License
  *
@@ -186,9 +186,16 @@
 
     collection.deletedModels = new Backbone.Collection
     collection.deletedModels.model = collection.model
+    collection.on('add', nestedModelAdded)
     collection.on('remove', nestedModelRemoved)
 
     return collection
+  }
+
+  function nestedModelAdded(model, collection) {
+    if (model.get('_destroy')) {
+      collection.remove(model)
+    }
   }
 
   function nestedModelRemoved(model, collection) {

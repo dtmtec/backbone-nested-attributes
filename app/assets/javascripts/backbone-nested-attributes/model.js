@@ -153,9 +153,16 @@
 
     collection.deletedModels = new Backbone.Collection
     collection.deletedModels.model = collection.model
+    collection.on('add', nestedModelAdded)
     collection.on('remove', nestedModelRemoved)
 
     return collection
+  }
+
+  function nestedModelAdded(model, collection) {
+    if (model.get('_destroy')) {
+      collection.remove(model)
+    }
   }
 
   function nestedModelRemoved(model, collection) {
