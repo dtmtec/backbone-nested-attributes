@@ -168,10 +168,18 @@
         jsonValue = value.toJSON(options)
 
         if (_(jsonValue).isArray()) {
-          json[key] = jsonValue.concat(deleted)
-        } else {
-          json[key] = jsonValue
+          jsonValue = jsonValue.concat(deleted)
         }
+
+        if (relation.serialize_keys) {
+          if (_(jsonValue).isArray()) {
+            jsonValue = _.map(jsonValue, function(j) { return _.pick(j, relation.serialize_keys) })
+          } else {
+            jsonValue = _.pick(jsonValue, relation.serialize_keys)
+          }
+        }
+
+        json[key] = jsonValue
       }
     })
 
