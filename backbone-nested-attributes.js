@@ -191,6 +191,7 @@
         collection     = new CollectionType
 
     collection.model = _(relation).result('relatedModel') || collection.model
+    collection.destroy_action = relation.destroy_action || '_destroy'
 
     collection.deletedModels = new Backbone.Collection
     collection.deletedModels.model = collection.model
@@ -201,14 +202,16 @@
   }
 
   function nestedModelAdded(model, collection) {
-    if (model.get('_destroy')) {
+    if (model.get(collection.destroy_action)) {
       collection.remove(model)
     }
   }
 
   function nestedModelRemoved(model, collection) {
     if (!model.isNew()) {
-      model.set({ _destroy: true })
+      param = {}
+      param[collection.destroy_action] = true
+      model.set(param)
       collection.deletedModels.add(model)
     }
   }
