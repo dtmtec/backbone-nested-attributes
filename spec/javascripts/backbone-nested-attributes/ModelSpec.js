@@ -735,5 +735,51 @@ describe("Backbone.NestedAttributesModel", function() {
         })
       })
     })
+
+    describe("with a custom destroy action", function() {
+      beforeEach(function() {
+        PostCustomDestroy = Backbone.NestedAttributesModel.extend({
+          relations: [
+            {
+              key: 'comments',
+              destroy_action: '_remove',
+              relatedModel: function() { return Comment }
+            }
+          ]
+        })
+
+        model = new PostCustomDestroy({ id: 321, title: 'Some Title', comments: [{ id: 123, body: 'some comment' }] })
+        comment = model.get('comments').at(0)
+      })
+
+      describe("toJSON with deleted models", function() {
+        it("serializes the deleted models in a relation with a <destroy_action> key", function() {
+          model.get('comments').remove(comment)
+
+          expect(model.toJSON({ withDeleted: true, nested: true })).toEqual({
+            id: 321,
+            title: 'Some Title',
+            comments_attributes: [{ id: 123, body: 'some comment', _remove: true }],
+            deleted_comments: [{ id: 123, body: 'some comment', _remove: true }]
+          })
+        })
+      })
+
+      describe('passing a model in a collection with { <destroy_action>: true }', function () {
+        beforeEach(function() {
+          model = new PostCustomDestroy({ title: 'Some Title', comments: [{ body: 'some content' }, { id: '123', body: 'other content', _remove: true }] })
+        })
+
+        it('do not add the model with { <destroy_action>: true } to the relation collection', function () {
+          expect(model.get('comments').length).toBe(1)
+          expect(model.get('comments').at(0).get('body')).toBe('some content')
+        })
+
+        it('adds them to the deletedModels collection inside the relation collection', function () {
+          expect(model.get('comments').deletedModels.length).toBe(1)
+          expect(model.get('comments').deletedModels.at(0).get('body')).toBe('other content')
+        })
+      })
+    })
   })
 })
