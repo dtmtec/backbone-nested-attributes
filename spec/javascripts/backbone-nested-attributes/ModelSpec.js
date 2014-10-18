@@ -255,6 +255,29 @@ describe("Backbone.NestedAttributesModel", function() {
         })
       })
     })
+
+    describe("with a whitelist of attributes to serialize", function() {
+      beforeEach(function() {
+        PostWhitelisted = Backbone.NestedAttributesModel.extend({
+          relations: [
+            {
+              type: 'one',
+              key:  'author',
+              serialize_keys: ['name'],
+              relatedModel: function() { return Person }
+            }
+          ]
+        })
+        model = new PostWhitelisted({ title: 'Some Title', author: { name: 'Jon Snow', adress: 'Some Adress' } })
+      })
+
+      it("only serialize whitelisted attributes", function() {
+        expect(model.toJSON({ nested: true })).toEqual({
+          title: 'Some Title',
+          author_attributes: { name: 'Jon Snow' }
+        })
+      })
+    })
   })
 
   describe("with a has many relationship", function() {
@@ -778,6 +801,29 @@ describe("Backbone.NestedAttributesModel", function() {
         it('adds them to the deletedModels collection inside the relation collection', function () {
           expect(model.get('comments').deletedModels.length).toBe(1)
           expect(model.get('comments').deletedModels.at(0).get('body')).toBe('other content')
+        })
+      })
+    })
+
+    describe("with a whitelist of attributes to serialize", function() {
+      beforeEach(function() {
+        PostWhitelisted = Backbone.NestedAttributesModel.extend({
+          relations: [
+            {
+              key:  'comments',
+              serialize_keys: ['id'],
+              relatedModel: function() { return Comment }
+            }
+          ]
+        })
+
+        model = new PostWhitelisted({ title: 'Some Title', comments: { id: 123, body: 'some comment' } })
+      })
+
+      it("only serialize whitelisted attributes", function() {
+        expect(model.toJSON({ nested: true })).toEqual({
+          title: 'Some Title',
+          comments_attributes: [ { id: 123 } ]
         })
       })
     })
