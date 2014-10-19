@@ -818,12 +818,24 @@ describe("Backbone.NestedAttributesModel", function() {
         })
 
         model = new PostWhitelisted({ title: 'Some Title', comments: { id: 123, body: 'some comment' } })
+        comment = model.get('comments').at(0)
       })
 
       it("only serialize whitelisted attributes", function() {
         expect(model.toJSON({ nested: true })).toEqual({
           title: 'Some Title',
           comments_attributes: [ { id: 123 } ]
+        })
+      })
+
+      describe("toJSON with deleted models", function() {
+        it("whitelist the <destroy_action> attribute", function() {
+          model.get('comments').remove(comment)
+
+          expect(model.toJSON({ nested: true })).toEqual({
+            title: 'Some Title',
+            comments_attributes: [{ id: 123, _destroy: true }]
+          })
         })
       })
     })

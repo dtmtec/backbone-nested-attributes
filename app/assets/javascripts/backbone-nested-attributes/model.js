@@ -160,6 +160,10 @@
     collection.model = _(relation).result('relatedModel') || collection.model
     collection.destroy_action = relation.destroy_action || '_destroy'
 
+    if (relation.serialize_keys) {
+      relation.serialize_keys.push(collection.destroy_action)
+    }
+
     collection.deletedModels = new Backbone.Collection
     collection.deletedModels.model = collection.model
     collection.on('add', nestedModelAdded)
