@@ -128,6 +128,33 @@ Send this data to the server:
 }
 ```
 
+You can whitelist attributes to serialize using `serialize_keys`
+```javascript
+var Post = Backbone.NestedAttributesModel.extend({
+  relations: [
+    {
+      key:  'comments',
+      serialize_keys: ['author', 'content'],
+      relatedModel: function () { return Comment }
+    }
+  ]
+})
+```
+
+The name of the attribute set on a destroyed model can be changed using `destroy_action`
+```javascript
+var Post = Backbone.NestedAttributesModel.extend({
+  relations: [
+    {
+      key:  'comments',
+      destroy_action: '_remove',
+      relatedModel: function () { return Comment }
+    }
+  ]
+})
+```
+This allow you to call another method on the model instead of destroy.
+
 ## Backbone.UndoableModel
 
 If you're using some [bind](https://github.com/NYTimes/backbone.stickit) plugin and you want to cancel changes that were made without reloading the page or hitting the backend you'll definitively want to take a look at Backbone.UndoableModel:
