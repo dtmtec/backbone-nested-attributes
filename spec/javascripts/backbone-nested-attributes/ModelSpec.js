@@ -255,6 +255,29 @@ describe("Backbone.NestedAttributesModel", function() {
         })
       })
     })
+
+    describe("with a whitelist of attributes to serialize", function() {
+      beforeEach(function() {
+        PostWhitelisted = Backbone.NestedAttributesModel.extend({
+          relations: [
+            {
+              type: 'one',
+              key:  'author',
+              serialize_keys: ['name'],
+              relatedModel: function() { return Person }
+            }
+          ]
+        })
+        model = new PostWhitelisted({ title: 'Some Title', author: { name: 'Jon Snow', adress: 'Some Adress' } })
+      })
+
+      it("only serialize whitelisted attributes", function() {
+        expect(model.toJSON({ nested: true })).toEqual({
+          title: 'Some Title',
+          author_attributes: { name: 'Jon Snow' }
+        })
+      })
+    })
   })
 
   describe("with a has many relationship", function() {
@@ -731,6 +754,87 @@ describe("Backbone.NestedAttributesModel", function() {
               comments_attributes: [{ id: 123, body: 'some comment', _destroy: true }],
               deleted_comments: [ { id: 123, body: 'some comment', _destroy: true } ]
             })
+          })
+        })
+      })
+    })
+
+    describe("with a custom destroy action", function() {
+      beforeEach(function() {
+        PostCustomDestroy = Backbone.NestedAttributesModel.extend({
+          relations: [
+            {
+              key: 'comments',
+              destroy_action: '_remove',
+              relatedModel: function() { return Comment }
+            }
+          ]
+        })
+
+        model = new PostCustomDestroy({ id: 321, title: 'Some Title', comments: [{ id: 123, body: 'some comment' }] })
+        comment = model.get('comments').at(0)
+      })
+
+      describe("toJSON with deleted models", function() {
+        it("serializes the deleted models in a relation with a <destroy_action> key", function() {
+          model.get('comments').remove(comment)
+
+          expect(model.toJSON({ withDeleted: true, nested: true })).toEqual({
+            id: 321,
+            title: 'Some Title',
+            comments_attributes: [{ id: 123, body: 'some comment', _remove: true }],
+            deleted_comments: [{ id: 123, body: 'some comment', _remove: true }]
+          })
+        })
+      })
+
+      describe('passing a model in a collection with { <destroy_action>: true }', function () {
+        beforeEach(function() {
+          model = new PostCustomDestroy({ title: 'Some Title', comments: [{ body: 'some content' }, { id: '123', body: 'other content', _remove: true }] })
+        })
+
+        it('do not add the model with { <destroy_action>: true } to the relation collection', function () {
+          expect(model.get('comments').length).toBe(1)
+          expect(model.get('comments').at(0).get('body')).toBe('some content')
+        })
+
+        it('adds them to the deletedModels collection inside the relation collection', function () {
+          expect(model.get('comments').deletedModels.length).toBe(1)
+          expect(model.get('comments').deletedModels.at(0).get('body')).toBe('other content')
+        })
+      })
+    })
+
+    describe("with a whitelist of attributes to serialize", function() {
+      beforeEach(function() {
+        PostWhitelisted = Backbone.NestedAttributesModel.extend({
+          relations: [
+            {
+              key:  'comments',
+              serialize_keys: ['id'],
+              relatedModel: function() { return Comment }
+            }
+          ]
+        })
+
+        model = new PostWhitelisted({ title: 'Some Title', comments: { id: 123, body: 'some comment' } })
+        comment = model.get('comments').at(0)
+      })
+
+      it("only serialize whitelisted attributes", function() {
+        expect(model.toJSON({ nested: true })).toEqual({
+          title: 'Some Title',
+          comments_attributes: [ { id: 123 } ]
+        })
+      })
+
+      describe("toJSON with deleted models", function() {
+        it("whitelist the <destroy_action> attribute", function() {
+          model.get('comments').remove(comment)
+
+          expect(model.toJSON({ nested: true })).toEqual({
+            title: 'Some Title',
+            comments_attributes: [{ id: 123, _destroy: true }]
           })
         })
       })

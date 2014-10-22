@@ -135,10 +135,18 @@
         jsonValue = value.toJSON(options)
 
         if (_(jsonValue).isArray()) {
-          json[key] = jsonValue.concat(deleted)
-        } else {
-          json[key] = jsonValue
+          jsonValue = jsonValue.concat(deleted)
         }
+
+        if (relation.serialize_keys) {
+          if (_(jsonValue).isArray()) {
+            jsonValue = _.map(jsonValue, function(j) { return _.pick(j, relation.serialize_keys) })
+          } else {
+            jsonValue = _.pick(jsonValue, relation.serialize_keys)
+          }
+        }
+
+        json[key] = jsonValue
       }
     })
 
@@ -150,6 +158,11 @@
         collection     = new CollectionType
 
     collection.model = _(relation).result('relatedModel') || collection.model
+    collection.destroy_action = relation.destroy_action || '_destroy'
+
+    if (relation.serialize_keys) {
+      relation.serialize_keys.push(collection.destroy_action)
+    }
 
     collection.deletedModels = new Backbone.Collection
     collection.deletedModels.model = collection.model
@@ -160,14 +173,16 @@
   }
 
   function nestedModelAdded(model, collection) {
-    if (model.get('_destroy')) {
+    if (model.get(collection.destroy_action)) {
       collection.remove(model)
     }
   }
 
   function nestedModelRemoved(model, collection) {
     if (!model.isNew()) {
-      model.set({ _destroy: true })
+      param = {}
+      param[collection.destroy_action] = true
+      model.set(param)
       collection.deletedModels.add(model)
     }
   }
