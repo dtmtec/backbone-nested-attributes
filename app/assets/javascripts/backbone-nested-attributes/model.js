@@ -45,6 +45,8 @@
       nested.set(value)
     }
 
+    nested.parentModel = model
+
     if (deletedValue) {
       delete attributes['deleted_' + key]
 
@@ -231,6 +233,10 @@
     clear: function (options) {
       clearNestedEvents(this)
       return BackboneModelPrototype.clear.apply(this, arguments)
-    }
+    },
+
+    parentModel: function() {
+       return this.collection.parentModel
+    },
   })
 })(Backbone, _);
